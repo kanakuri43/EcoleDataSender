@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.7.34018.315
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EcoleDataSender", "EcoleDataSender\EcoleDataSender.csproj", "{E003B0C0-66E0-4CB9-A7AB-67F57DDEABF0}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{E003B0C0-66E0-4CB9-A7AB-67F57DDEABF0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E003B0C0-66E0-4CB9-A7AB-67F57DDEABF0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E003B0C0-66E0-4CB9-A7AB-67F57DDEABF0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E003B0C0-66E0-4CB9-A7AB-67F57DDEABF0}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {9EC81301-05A8-4941-8279-0699AFB94A71}
+	EndGlobalSection
+EndGlobal
