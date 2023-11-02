@@ -1,0 +1,37 @@
+﻿<?xml version='1.0' encoding='utf-8'?>
+<Configuration>
+  <Database>
+    <ConnectionString>server=172.16.16.72; user id=sa;database=EDC_DB;</ConnectionString>
+    <Query>
+      SELECT
+      I.エコールコード
+      , I.商品名
+      , I.品番
+      , I.分類コード
+      , I.単位
+      , I.表示定価
+      , I.品番
+      , M.商品メーカー名
+      FROM
+      M商品基本 I
+      LEFT JOIN M商品メーカー M
+      ON I.メーカーコード = M.商品メーカーコード
+      WHERE
+      I.削除FLG = 0
+      AND I.最終更新日時 BETWEEN 20230201000000 AND 20230203000000
+
+    </Query>
+  </Database>
+  <Output>
+    <Folder>./output/</Folder>
+  </Output>
+  <Email>
+    <To>t-okita@netoffice.obisan.co.jp</To>
+    <From>t-okita@netoffice.obisan.co.jp</From>
+    <SmtpServer>mss290.kagoya.net</SmtpServer>
+    <SmtpPort>587</SmtpPort>
+    <SmtpUser>t-okita</SmtpUser>
+    <SmtpPassword>cthUVpPB1x</SmtpPassword>
+  </Email>
+</Configuration>
+
