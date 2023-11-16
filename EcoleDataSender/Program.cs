@@ -49,7 +49,8 @@ namespace EcoleDataSender
                 SmtpServer = doc.Root.Element("Email").Element("SmtpServer").Value,
                 SmtpPort = int.Parse(doc.Root.Element("Email").Element("SmtpPort").Value),
                 SmtpUser = doc.Root.Element("Email").Element("SmtpUser").Value,
-                SmtpPassword = doc.Root.Element("Email").Element("SmtpPassword").Value
+                SmtpPassword = doc.Root.Element("Email").Element("SmtpPassword").Value,
+                IdentifySubject = doc.Root.Element("Email").Element("IdentifySubject").Value
             };
         }
 
@@ -98,7 +99,7 @@ namespace EcoleDataSender
 
             using var message = new MailMessage(config.EmailFrom, config.EmailTo)
             {
-                Subject = "エコール商品マスタ",
+                Subject = config.IdentifySubject,
                 Body = "Please find attached the data file."
             };
 
