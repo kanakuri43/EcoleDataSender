@@ -4,6 +4,8 @@ using System.IO;
 using System.Net.Mail;
 using System.Text;
 using System.Xml.Linq;
+using OpenPop.Mime;
+using OpenPop.Pop3;
 
 namespace EcoleDataSender
 {
@@ -14,28 +16,39 @@ namespace EcoleDataSender
             StreamWriter sw = new StreamWriter(string.Format(@"log/{0}.log", DateTime.Now.ToString("yyyyMMdd_HHmmss"), true));
             try
             {
-                // Log出力設定
+                // 初期設定
                 Console.SetOut(sw); 
-                Console.WriteLine(string.Format("{0} Starting the process...", DateTime.Now.ToString("HH:mm:ss")));
-
+                Console.WriteLine($"{DateTime.Now:HH:mm:ss} Starting the process...");
+                Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
                 var config = LoadConfig();
 
-                ReceiveResponseEmail();
+                // 更新完了メール確認
+                var notifiedFileName = ReceiveEmail(config);
+                if (notifiedFileName != "")
+                {
+                    // 通知があったらoutputフォルダから削除
+                    DeleteFile(config, notifiedFileName);
+                }
 
+                // outputフォルダが空かチェック
                 if (OutputDirectoryEmptyCheck(config) == false)
                 {
-                    Console.WriteLine(string.Format("{0} Output directory is not empty.", DateTime.Now.ToString("HH:mm:ss")));
+                    // 以前のファイルgア残っていたらファイル作成しないで終了
+                    Console.WriteLine($"{DateTime.Now:HH:mm:ss} Output directory is not empty.");
                     return;
                 }
 
+                // 更新対象データでTSV作成
                 var csvFilePath = QueryExecutionAndTsvSave(config);                
+
+                // メールで送信
                 SendEmail(config, csvFilePath);
 
-                Console.WriteLine(string.Format("{0} Process completed successfully.", DateTime.Now.ToString("HH:mm:ss")));
+                Console.WriteLine($"{DateTime.Now:HH:mm:ss} Process completed successfully.");
             }
             catch (Exception ex)
             {
-                Console.WriteLine(string.Format("{0} Error: {1}", DateTime.Now.ToString("HH:mm:ss"), ex.Message));
+                Console.WriteLine($"{DateTime.Now:HH:mm:ss} Error: {ex.Message}");
             }
             finally
             {
@@ -50,21 +63,54 @@ namespace EcoleDataSender
             return new
             {
                 ConnectionString = doc.Root.Element("Database").Element("ConnectionString").Value,
-                Query = doc.Root.Element("Database").Element("Query").Value,
-                OutputFolder = doc.Root.Element("Output").Element("Folder").Value,
-                EmailTo = doc.Root.Element("Email").Element("To").Value,
-                EmailFrom = doc.Root.Element("Email").Element("From").Value,
-                SmtpServer = doc.Root.Element("Email").Element("SmtpServer").Value,
-                SmtpPort = int.Parse(doc.Root.Element("Email").Element("SmtpPort").Value),
-                SmtpUser = doc.Root.Element("Email").Element("SmtpUser").Value,
-                SmtpPassword = doc.Root.Element("Email").Element("SmtpPassword").Value,
-                SubjectString = doc.Root.Element("Email").Element("SubjectString").Value
+                Query           = doc.Root.Element("Database").Element("Query").Value,
+                OutputFolder    = doc.Root.Element("Output").Element("Folder").Value,
+
+                Pop3Server      = doc.Root.Element("Email").Element("Pop3").Element("Server").Value,
+                Pop3Port        = int.Parse(doc.Root.Element("Email").Element("Pop3").Element("Port").Value),
+                Pop3User        = doc.Root.Element("Email").Element("Pop3").Element("User").Value,
+                Pop3Password    = doc.Root.Element("Email").Element("Pop3").Element("Password").Value,
+
+                EmailTo         = doc.Root.Element("Email").Element("Smtp").Element("To").Value,
+                EmailFrom       = doc.Root.Element("Email").Element("Smtp").Element("From").Value,
+                SmtpServer      = doc.Root.Element("Email").Element("Smtp").Element("Server").Value,
+                SmtpPort        = int.Parse(doc.Root.Element("Email").Element("Smtp").Element("Port").Value),
+                SmtpUser        = doc.Root.Element("Email").Element("Smtp").Element("User").Value,
+                SmtpPassword    = doc.Root.Element("Email").Element("Smtp").Element("Password").Value,
+                
+                Subject     = doc.Root.Element("Email").Element("Subject").Value
             };
         }
 
-        static void ReceiveResponseEmail()
+        static string ReceiveEmail(dynamic config)
         {
+            Console.WriteLine($"{DateTime.Now:HH:mm:ss} Fetching email attachment...");
 
+            using var client = new Pop3Client();
+            client.Connect(config.Pop3Server, config.Pop3Port, true);
+            client.Authenticate(config.Pop3User, config.Pop3Password);
+
+            var messageCount = client.GetMessageCount();
+
+            // Find the first message with the specified subject and an attachment
+            Message attachmentMessage = null;
+            for (int i = messageCount; i >= 1; i--)
+            {
+                var message = client.GetMessage(i);
+                if (message.Headers.Subject.Contains(config.Subject))
+                {
+                    var body = message.FindFirstPlainTextVersion().GetBodyAsText();
+
+                    return (body);
+                }
+            }
+            return "";
+
+        }
+
+        static void DeleteFile(dynamic config, string FileName)
+        {
+            File.Delete($"{config.OutputFolder}" + FileName);
         }
 
         static bool OutputDirectoryEmptyCheck(dynamic config)
@@ -133,7 +179,7 @@ namespace EcoleDataSender
 
             using var message = new MailMessage(config.EmailFrom, config.EmailTo)
             {
-                Subject = config.IdentifySubject,
+                Subject = config.Subject,
                 Body = "Please find attached the data file."
             };
 

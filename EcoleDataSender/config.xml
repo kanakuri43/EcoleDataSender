@@ -26,13 +26,21 @@
     <Folder>./output/</Folder>
   </Output>
   <Email>
-    <To>t-okita@netoffice.obisan.co.jp</To>
-    <From>t-okita@netoffice.obisan.co.jp</From>
-    <SmtpServer>mss290.kagoya.net</SmtpServer>
-    <SmtpPort>587</SmtpPort>
-    <SmtpUser>t-okita</SmtpUser>
-    <SmtpPassword>cthUVpPB1x</SmtpPassword>
-    <SubjectString>###EcoleData###</SubjectString>
+    <Subject>###EcoleData###</Subject>
+    <Pop3>
+      <Server>mss290.kagoya.net</Server>
+      <Port>995</Port>
+      <User>t-okita</User>
+      <Password>cthUVpPB1x</Password>
+    </Pop3>
+    <Smtp>
+      <To>t-okita@netoffice.obisan.co.jp</To>
+      <From>t-okita@netoffice.obisan.co.jp</From>
+      <Server>mss290.kagoya.net</Server>
+      <Port>587</Port>
+      <User>t-okita</User>
+      <Password>cthUVpPB1x</Password>
+    </Smtp>    
   </Email>
 </Configuration>
 
