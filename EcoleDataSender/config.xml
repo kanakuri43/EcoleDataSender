@@ -32,7 +32,7 @@
     <SmtpPort>587</SmtpPort>
     <SmtpUser>t-okita</SmtpUser>
     <SmtpPassword>cthUVpPB1x</SmtpPassword>
-    <IdentifySubject>###EcoleData###</IdentifySubject>
+    <SubjectString>###EcoleData###</SubjectString>
   </Email>
 </Configuration>
 

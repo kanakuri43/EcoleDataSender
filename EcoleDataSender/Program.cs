@@ -2,6 +2,7 @@
 using System.Data.SqlClient;
 using System.IO;
 using System.Net.Mail;
+using System.Text;
 using System.Xml.Linq;
 
 namespace EcoleDataSender
@@ -13,14 +14,21 @@ namespace EcoleDataSender
             StreamWriter sw = new StreamWriter(string.Format(@"log/{0}.log", DateTime.Now.ToString("yyyyMMdd_HHmmss"), true));
             try
             {
-                Console.SetOut(sw); // 出力先を設定
+                // Log出力設定
+                Console.SetOut(sw); 
                 Console.WriteLine(string.Format("{0} Starting the process...", DateTime.Now.ToString("HH:mm:ss")));
 
                 var config = LoadConfig();
 
-                var dataTable = ExecuteSelect(config);
-                var csvFilePath = SaveToCsv(dataTable, config.OutputFolder);
+                ReceiveResponseEmail();
 
+                if (OutputDirectoryEmptyCheck(config) == false)
+                {
+                    Console.WriteLine(string.Format("{0} Output directory is not empty.", DateTime.Now.ToString("HH:mm:ss")));
+                    return;
+                }
+
+                var csvFilePath = QueryExecutionAndTsvSave(config);                
                 SendEmail(config, csvFilePath);
 
                 Console.WriteLine(string.Format("{0} Process completed successfully.", DateTime.Now.ToString("HH:mm:ss")));
@@ -50,40 +58,66 @@ namespace EcoleDataSender
                 SmtpPort = int.Parse(doc.Root.Element("Email").Element("SmtpPort").Value),
                 SmtpUser = doc.Root.Element("Email").Element("SmtpUser").Value,
                 SmtpPassword = doc.Root.Element("Email").Element("SmtpPassword").Value,
-                IdentifySubject = doc.Root.Element("Email").Element("IdentifySubject").Value
+                SubjectString = doc.Root.Element("Email").Element("SubjectString").Value
             };
         }
 
-        static System.Data.DataTable ExecuteSelect(dynamic config)
+        static void ReceiveResponseEmail()
         {
-            Console.WriteLine(string.Format("{0} Executing SQL Select statement...", DateTime.Now.ToString("HH:mm:ss")));
 
-            using var connection = new SqlConnection(config.ConnectionString);
-            connection.Open();
-
-            using var command = new SqlCommand(config.Query, connection);
-
-            var reader = command.ExecuteReader();
-            var dataTable = new System.Data.DataTable();
-            dataTable.Load(reader);
-
-            Console.WriteLine(string.Format("{0} SQL Select statement executed successfully.", DateTime.Now.ToString("HH:mm:ss")));
-            return dataTable;
         }
 
-        static string SaveToCsv(System.Data.DataTable table, string folder)
+        static bool OutputDirectoryEmptyCheck(dynamic config)
         {
-            Console.WriteLine(string.Format("{0} Saving data to CSV...", DateTime.Now.ToString("HH:mm:ss")));
+            Console.WriteLine(string.Format("{0} Checking the output directory is empty...", DateTime.Now.ToString("HH:mm:ss")));
 
-            var filePath = $"{folder}{DateTime.Now:yyyyMMdd-HHmmss}.csv";
-            using var writer = new StreamWriter(filePath);
-            foreach (System.Data.DataRow row in table.Rows)
+            if (Directory.Exists($"{config.OutputFolder}"))
             {
-                var items = row.ItemArray;
-                writer.WriteLine(string.Join(",", items));
+                string[] files = Directory.GetFiles($"{config.OutputFolder}");
+                return (files.Length == 0);
             }
+            else { return false; }
+        }
 
+        static string QueryExecutionAndTsvSave(dynamic config)
+        {
+            Console.WriteLine(string.Format("{0} Executing SQL Select statement and Save data to TSV...", DateTime.Now.ToString("HH:mm:ss")));
+
+            string connectionString = config.ConnectionString;
+            string query = config.Query;
+            StringBuilder tsvContent = new StringBuilder();
+            var filePath = $"{config.OutputFolder}{DateTime.Now:yyyyMMdd-HHmmss}.tsv";
+
+            using (SqlConnection conn = new SqlConnection(connectionString))
+            {
+                SqlCommand cmd = new SqlCommand(query, conn);
+                conn.Open();
+                using (SqlDataReader reader = cmd.ExecuteReader())
+                {
+                    // ヘッダー行の追加
+                    for (int i = 0; i < reader.FieldCount; i++)
+                    {
+                        tsvContent.Append(reader.GetName(i) + "\t");
+                    }
+                    tsvContent.AppendLine();
+
+                    // データ行の追加
+                    while (reader.Read())
+                    {
+                        for (int i = 0; i < reader.FieldCount; i++)
+                        {
+                            // タブ、改行、キャリッジリターンをエスケープ
+                            var fieldValue = reader[i].ToString().Replace("\t", " ").Replace("\n", " ").Replace("\r", " ");
+                            tsvContent.Append(fieldValue + "\t");
+                        }
+                        tsvContent.AppendLine();
+                    }
+                }
+            }
+            // TSVをファイルに保存
+            File.WriteAllText(filePath, tsvContent.ToString());
             Console.WriteLine(string.Format("{0} Data saved to {1}", DateTime.Now.ToString("HH:mm:ss"), filePath));
+
             return filePath;
         }
 
