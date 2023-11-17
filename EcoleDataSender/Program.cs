@@ -39,10 +39,10 @@ namespace EcoleDataSender
                 }
 
                 // 更新対象データでTSV作成
-                var csvFilePath = QueryExecutionAndTsvSave(config);                
+                var tsvFilePath = QueryExecutionAndTsvSave(config);                
 
                 // メールで送信
-                SendEmail(config, csvFilePath);
+                SendEmail(config, tsvFilePath);
 
                 Console.WriteLine($"{DateTime.Now:HH:mm:ss} Process completed successfully.");
             }
@@ -70,6 +70,7 @@ namespace EcoleDataSender
                 Pop3Port        = int.Parse(doc.Root.Element("Email").Element("Pop3").Element("Port").Value),
                 Pop3User        = doc.Root.Element("Email").Element("Pop3").Element("User").Value,
                 Pop3Password    = doc.Root.Element("Email").Element("Pop3").Element("Password").Value,
+                ReceiveSubject  = doc.Root.Element("Email").Element("Pop3").Element("Subject").Value,
 
                 EmailTo         = doc.Root.Element("Email").Element("Smtp").Element("To").Value,
                 EmailFrom       = doc.Root.Element("Email").Element("Smtp").Element("From").Value,
@@ -78,7 +79,7 @@ namespace EcoleDataSender
                 SmtpUser        = doc.Root.Element("Email").Element("Smtp").Element("User").Value,
                 SmtpPassword    = doc.Root.Element("Email").Element("Smtp").Element("Password").Value,
                 
-                Subject     = doc.Root.Element("Email").Element("Subject").Value
+                SendSubject     = doc.Root.Element("Email").Element("Smtp").Element("Subject").Value
             };
         }
 
@@ -97,20 +98,34 @@ namespace EcoleDataSender
             for (int i = messageCount; i >= 1; i--)
             {
                 var message = client.GetMessage(i);
-                if (message.Headers.Subject.Contains(config.Subject))
-                {
+                if (message.Headers.Subject.Contains(config.ReceiveSubject))
+                {                    
+                    Console.WriteLine($"{DateTime.Now:HH:mm:ss} Updated notification mail received.");
                     var body = message.FindFirstPlainTextVersion().GetBodyAsText();
+                    client.DeleteMessage(i);
+                    client.Disconnect();
+                    Console.WriteLine($"{DateTime.Now:HH:mm:ss} Updated notification mail deleted.");
 
                     return (body);
                 }
             }
+            
             return "";
-
         }
 
-        static void DeleteFile(dynamic config, string FileName)
-        {
-            File.Delete($"{config.OutputFolder}" + FileName);
+        static void DeleteFile(dynamic config, string fileName)
+        {            
+            Console.WriteLine($"{DateTime.Now:HH:mm:ss} Deleting files that have been updated.");
+
+            if (File.Exists($"{config.OutputFolder}" + fileName))
+            {
+                File.Delete($"{config.OutputFolder}" + fileName);
+            }
+            else
+            {
+                // ファイルがなければ何もしない
+                Console.WriteLine($"{DateTime.Now:HH:mm:ss} Target File Not Found.");
+            }
         }
 
         static bool OutputDirectoryEmptyCheck(dynamic config)
@@ -179,8 +194,8 @@ namespace EcoleDataSender
 
             using var message = new MailMessage(config.EmailFrom, config.EmailTo)
             {
-                Subject = config.Subject,
-                Body = "Please find attached the data file."
+                Subject = config.SendSubject,
+                Body = ""
             };
 
             message.Attachments.Add(new Attachment(filePath));
