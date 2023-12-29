@@ -79,7 +79,7 @@ namespace EcoleDataSender
                 SmtpUser        = doc.Root.Element("Email").Element("Smtp").Element("User").Value,
                 SmtpPassword    = doc.Root.Element("Email").Element("Smtp").Element("Password").Value,
                 
-                SendSubject     = doc.Root.Element("Email").Element("Smtp").Element("Subject").Value
+                SendSubject     = doc.Root.Element("Email").Element("Smtp").Element("Subject").Value + doc.Root.Element("company").Element("Id").Value
             };
         }
 
