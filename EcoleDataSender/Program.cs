@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Data.SqlClient;
+using System.Data.SQLite;
 using System.IO;
 using System.Net.Mail;
 using System.Text;
@@ -23,14 +24,18 @@ namespace EcoleDataSender
                 var config = LoadConfig();
 
                 // 更新完了メール確認
+                // 更新完了メールは、本文に受信側が更新完了したファイル名が入ってくる
+                /*
                 var notifiedFileName = ReceiveEmail(config);
                 if (notifiedFileName != "")
                 {
                     // 通知があったらoutputフォルダから削除
                     DeleteFile(config, notifiedFileName);
                 }
+                */
 
                 // outputフォルダが空かチェック
+                // 通知メールの有無にかかわらず、出力フォルダが空だったら処理を開始する
                 if (OutputDirectoryEmptyCheck(config) == false)
                 {
                     // 以前のファイルgア残っていたらファイル作成しないで終了
@@ -39,11 +44,13 @@ namespace EcoleDataSender
                 }
 
                 // 更新対象データでTSV作成
-                var tsvFilePath = QueryExecutionAndTsvSave(config);                
+                //var tsvFilePath = QueryExecutionAndSaveTsv(config);
+                // 更新対象データでSQLiteファイル作成
+                var sqliteFilePath = QueryExecutionAndSaveSQLite(config);
 
                 // メールで送信
-                SendEmail(config, tsvFilePath);
-
+                /*SendEmail(config, tsvFilePath);
+                */
                 Console.WriteLine($"{DateTime.Now:HH:mm:ss} Process completed successfully.");
             }
             catch (Exception ex)
@@ -79,7 +86,7 @@ namespace EcoleDataSender
                 SmtpUser        = doc.Root.Element("Email").Element("Smtp").Element("User").Value,
                 SmtpPassword    = doc.Root.Element("Email").Element("Smtp").Element("Password").Value,
                 
-                SendSubject     = doc.Root.Element("Email").Element("Smtp").Element("Subject").Value + doc.Root.Element("company").Element("Id").Value
+                SendSubject     = doc.Root.Element("Email").Element("Smtp").Element("Subject").Value + doc.Root.Element("Company").Element("Id").Value
             };
         }
 
@@ -140,7 +147,7 @@ namespace EcoleDataSender
             else { return false; }
         }
 
-        static string QueryExecutionAndTsvSave(dynamic config)
+        static string QueryExecutionAndSaveTsv(dynamic config)
         {
             Console.WriteLine(string.Format("{0} Executing SQL Select statement and Save data to TSV...", DateTime.Now.ToString("HH:mm:ss")));
 
@@ -182,6 +189,62 @@ namespace EcoleDataSender
             return filePath;
         }
 
+        static string QueryExecutionAndSaveSQLite(dynamic config)
+        {
+            Console.WriteLine(string.Format("{0} Executing SQL Select statement and Save data to SQLIte DB...", DateTime.Now.ToString("HH:mm:ss")));
+
+            string connectionString = config.ConnectionString;
+            string query = config.Query;
+            var sqliteFileName = $"{config.OutputFolder}{DateTime.Now:yyyyMMdd}.sqlite";
+
+            using (SqlConnection sqlCon = new SqlConnection(connectionString))
+            {
+                SqlCommand cmd = new SqlCommand(query, sqlCon);
+                sqlCon.Open();
+                using (SqlDataReader reader = cmd.ExecuteReader())
+                {
+                    var sqliteCon = new SQLiteConnection($"Data Source={sqliteFileName};Version=3;");
+                    sqliteCon.Open();
+                    using (var command = new SQLiteCommand(sqliteCon))
+                    {
+                        var sql = "CREATE TABLE updated_items ( "
+                                + "エコールコード INTEGER"
+                                + ", 商品名 TEXT "
+                                + ", 品番 TEXT "
+                                + ", 分類コード TEXT "
+                                + ", 単位 TEXT "
+                                + ", 表示定価 REAL "
+                                + ", 商品メーカー名 TEXT "
+                                + ")";
+                        command.CommandText = sql;
+                        command.ExecuteNonQuery();
+                    }
+
+                    // データ行の追加
+                    while (reader.Read())
+                    {
+                        using (var command = new SQLiteCommand(sqliteCon))
+                        {
+                            var sql = "INSERT INTO updated_items "
+                                    + "VALUES ("
+                                    + (int)reader["エコールコード"]
+                                    + ", '" + reader["商品名"].ToString() + "'"
+                                    + ", '" + reader["品番"].ToString() + "'"
+                                    + ", '" + reader["分類コード"].ToString() + "'"
+                                    + ", '" + reader["単位"].ToString() + "'"
+                                    + ", '" + Convert.ToSingle(reader["表示定価"]) + "'"
+                                    + ", '" + reader["商品メーカー名"].ToString() + "'"
+                                    + ")";
+                            command.CommandText = sql;
+                            command.ExecuteNonQuery();
+                        }
+
+                    }
+                }
+            }
+
+            return sqliteFileName;
+        }
         static void SendEmail(dynamic config, string filePath)
         {
             Console.WriteLine(string.Format("{0} Sending email...", DateTime.Now.ToString("HH:mm:ss")));

@@ -1,7 +1,13 @@
 ﻿<?xml version='1.0' encoding='utf-8'?>
 <Configuration>
   <Database>
+    <!-- Obisan
     <ConnectionString>server=172.16.16.72; user id=sa;database=EDC_DB;</ConnectionString>
+    -->
+    <!-- TRILLIA
+    <ConnectionString>Data Source=192.168.140.128;Initial Catalog=TAB20;User ID=sa;Password=Sapassword1;TrustServerCertificate=true</ConnectionString>
+    -->
+    <ConnectionString>Data Source=192.168.140.128;Initial Catalog=EDC_DB;User ID=sa;Password=Sapassword1;TrustServerCertificate=true</ConnectionString>
     <Query>
       SELECT
       I.エコールコード
@@ -10,7 +16,6 @@
       , I.分類コード
       , I.単位
       , I.表示定価
-      , I.品番
       , M.商品メーカー名
       FROM
       M商品基本 I
