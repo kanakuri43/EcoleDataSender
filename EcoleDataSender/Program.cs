@@ -25,14 +25,13 @@ namespace EcoleDataSender
 
                 // 更新完了メール確認
                 // 更新完了メールは、本文に受信側が更新完了したファイル名が入ってくる
-                /*
                 var notifiedFileName = ReceiveEmail(config);
                 if (notifiedFileName != "")
                 {
                     // 通知があったらoutputフォルダから削除
                     DeleteFile(config, notifiedFileName);
                 }
-                */
+                
 
                 // outputフォルダが空かチェック
                 // 通知メールの有無にかかわらず、出力フォルダが空だったら処理を開始する
@@ -43,14 +42,12 @@ namespace EcoleDataSender
                     return;
                 }
 
-                // 更新対象データでTSV作成
-                //var tsvFilePath = QueryExecutionAndSaveTsv(config);
                 // 更新対象データでSQLiteファイル作成
                 var sqliteFilePath = QueryExecutionAndSaveSQLite(config);
 
                 // メールで送信
-                /*SendEmail(config, tsvFilePath);
-                */
+                SendEmail(config, sqliteFilePath);
+                
                 Console.WriteLine($"{DateTime.Now:HH:mm:ss} Process completed successfully.");
             }
             catch (Exception ex)
